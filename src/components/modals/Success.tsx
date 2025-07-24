@@ -12,7 +12,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
   isOpen,
   onClose,
   title = "Registration Successful!",
-  message = "Thank you for registering for the IEEE Conference. We'll send you more details soon!"
+  message = "Thank you for registering for the IIEE Conference. We'll send you more details soon!"
 }) => {
   // Close modal with Escape key
   useEffect(() => {

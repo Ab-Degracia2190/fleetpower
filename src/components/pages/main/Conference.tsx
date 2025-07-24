@@ -37,7 +37,7 @@ interface FileInfo {
   recordCount: number;
 }
 
-export default function IEEEConferencePage() {
+export default function IIEEConferencePage() {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     companyName: "",
@@ -183,11 +183,11 @@ export default function IEEEConferencePage() {
 
           <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-6 py-2 mb-6 border border-white/20 animate-fade-in">
             <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
-            <span className="text-white font-medium">IEEE Conference 2025</span>
+            <span className="text-white font-medium">IIEE Conference 2025</span>
           </div>
 
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 bg-gradient-to-r from-blue-200 via-white to-blue-200 bg-clip-text text-transparent animate-fade-in-up">
-            24TH IEEE EASTERN AND CENTRAL VISAYAS
+            24TH IIEE EASTERN AND CENTRAL VISAYAS
           </h1>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-blue-100 mb-6 animate-fade-in-up animation-delay-300">
             REGIONAL CONFERENCE

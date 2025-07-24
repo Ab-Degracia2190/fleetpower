@@ -226,7 +226,7 @@ export class GoogleSheetsService {
 
     private static async initializeHeaders(): Promise<void> {
         const headerValues = [
-            ['24TH IEEE EASTERN AND CENTRAL VISAYAS REGIONAL CONFERENCE'],
+            ['24TH IIEE EASTERN AND CENTRAL VISAYAS REGIONAL CONFERENCE'],
             ['IEC Pavilion, Cebu City'],
             ['JULY 25 - 26, 2025'],
             [],
