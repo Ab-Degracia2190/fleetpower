@@ -1,8 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { MapPin, Calendar, Users, Sparkles, User, Building, Phone, Download, FileText, Power, Settings, Filter } from 'lucide-react';
-import { ExcelService } from '../../../base/services/ExcelService';
-import SuccessModal from '../../modals/Success';
-import Logo from '../../../assets/images/FleetCompleteLogo.jpg';
+import React, { useState, useEffect } from "react";
+import {
+  MapPin,
+  Calendar,
+  Users,
+  Sparkles,
+  User,
+  Building,
+  Phone,
+  FileText,
+  Zap,
+  Sliders,
+  Filter,
+} from "lucide-react";
+import { GoogleSheetsService } from "@/base/services/GoogleSheetsService";
+import SuccessModal from "@/components/modals/Success";
+import ErrorModal from "@/components/modals/Error";
+import Logo from "@/assets/images/FleetCompleteLogo.jpg";
 
 interface FormData {
   name: string;
@@ -19,36 +32,46 @@ interface FormErrors {
 }
 
 interface FileInfo {
-  filename: string;
+  spreadsheetId: string;
   lastModified: Date;
   recordCount: number;
 }
 
 export default function IEEEConferencePage() {
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    companyName: '',
-    contactNumber: '',
-    emailAddress: ''
+    name: "",
+    companyName: "",
+    contactNumber: "",
+    emailAddress: "",
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
 
-  // Load file info on component mount
   useEffect(() => {
-    loadFileInfo();
+    const loadClient = async () => {
+      try {
+        await GoogleSheetsService.initializeClient();
+        loadFileInfo();
+      } catch (error) {
+        console.error("Error initializing Google Identity Services:", error);
+        setErrorMessage("Failed to initialize Google Services. Please refresh the page and try again.");
+        setShowErrorModal(true);
+      }
+    };
+    loadClient();
   }, []);
 
   const loadFileInfo = async () => {
     try {
-      const info = await ExcelService.getFileInfo();
+      const info = await GoogleSheetsService.getFileInfo();
       setFileInfo(info);
     } catch (error) {
-      console.error('Error loading file info:', error);
+      console.error("Error loading file info:", error);
     }
   };
 
@@ -61,21 +84,21 @@ export default function IEEEConferencePage() {
     const newErrors: FormErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = "Name is required";
     }
 
     if (!formData.companyName.trim()) {
-      newErrors.companyName = 'Company name is required';
+      newErrors.companyName = "Company name is required";
     }
 
     if (!formData.contactNumber.trim()) {
-      newErrors.contactNumber = 'Contact number is required';
+      newErrors.contactNumber = "Contact number is required";
     }
 
     if (!formData.emailAddress.trim()) {
-      newErrors.emailAddress = 'Email address is required';
+      newErrors.emailAddress = "Email address is required";
     } else if (!validateEmail(formData.emailAddress)) {
-      newErrors.emailAddress = 'Please enter a valid email address';
+      newErrors.emailAddress = "Please enter a valid email address";
     }
 
     setErrors(newErrors);
@@ -83,10 +106,10 @@ export default function IEEEConferencePage() {
   };
 
   const handleInputChange = (field: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
 
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
   };
 
@@ -98,37 +121,29 @@ export default function IEEEConferencePage() {
     setIsLoading(true);
 
     try {
-      await ExcelService.addRegistration(formData);
+      console.log("Submitting form data:", formData);
+      await GoogleSheetsService.addRegistration(formData);
+
       setShowSuccessModal(true);
       setFormData({
-        name: '',
-        companyName: '',
-        contactNumber: '',
-        emailAddress: ''
+        name: "",
+        companyName: "",
+        contactNumber: "",
+        emailAddress: "",
       });
+
       await loadFileInfo();
-    } catch (error) {
-      console.error('Error saving registration:', error);
+    } catch (error: any) {
+      console.error("Error saving registration:", error);
+      setErrorMessage(error?.message || "Unknown error occurred. Please try again.");
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDownload = async () => {
-    if (!fileInfo) return;
-
-    setIsDownloading(true);
-    try {
-      await ExcelService.downloadExcelFile();
-    } catch (error) {
-      console.error('Error downloading file:', error);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   const handleRegisterClick = () => {
-    const form = document.getElementById('conference-form') as HTMLFormElement;
+    const form = document.getElementById("conference-form") as HTMLFormElement;
     if (form) {
       form.requestSubmit();
     }
@@ -136,6 +151,11 @@ export default function IEEEConferencePage() {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
+  };
+
+  const handleErrorModalClose = () => {
+    setShowErrorModal(false);
+    setErrorMessage("");
   };
 
   return (
@@ -161,7 +181,7 @@ export default function IEEEConferencePage() {
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-6 py-2 mb-6 border border-white/20 animate-fade-in">
+          <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm rounded-full px-6 py-2 mb-6 border border-white/20 animate-fade-in">
             <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
             <span className="text-white font-medium">IEEE Conference 2025</span>
           </div>
@@ -173,7 +193,9 @@ export default function IEEEConferencePage() {
             REGIONAL CONFERENCE
           </h2>
           <p className="text-lg text-blue-200 mb-8 max-w-3xl mx-auto animate-fade-in-up animation-delay-600">
-            Join us for cutting-edge research presentations, networking with industry leaders, and hands-on technical workshops at this premier technology event.
+            Join us for cutting-edge research presentations, networking with
+            industry leaders, and hands-on technical workshops at this premier
+            technology event.
           </p>
 
           <div className="flex flex-wrap justify-center gap-6 text-white/80 mb-8 animate-fade-in-up animation-delay-600">
@@ -193,19 +215,27 @@ export default function IEEEConferencePage() {
 
           <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-12 animate-fade-in-up animation-delay-900">
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 group">
-              <Power className="w-12 h-12 text-blue-300 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
-              <h3 className="text-xl font-bold text-white mb-2">Research Presentations</h3>
-              <p className="text-blue-200 text-sm">Discover cutting-edge research in technology and engineering</p>
+              <Zap className="w-12 h-12 text-blue-300 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
+              <h3 className="text-xl font-bold text-white mb-2">
+                Research Presentations
+              </h3>
+              <p className="text-blue-200 text-sm">
+                Discover cutting-edge research in technology and engineering
+              </p>
             </div>
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 group">
-              <Settings className="w-12 h-12 text-green-300 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
+              <Sliders className="w-12 h-12 text-green-300 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-xl font-bold text-white mb-2">Networking</h3>
-              <p className="text-blue-200 text-sm">Connect with industry leaders and professionals</p>
+              <p className="text-blue-200 text-sm">
+                Connect with industry leaders and professionals
+              </p>
             </div>
             <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:bg-white/15 transition-all duration-300 group">
               <Filter className="w-12 h-12 text-red-300 mx-auto mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-xl font-bold text-white mb-2">Workshops</h3>
-              <p className="text-blue-200 text-sm">Hands-on technical workshops and demonstrations</p>
+              <p className="text-blue-200 text-sm">
+                Hands-on technical workshops and demonstrations
+              </p>
             </div>
           </div>
         </div>
@@ -217,31 +247,41 @@ export default function IEEEConferencePage() {
                 <div className="flex items-center gap-3">
                   <FileText className="w-6 h-6 text-green-300" />
                   <div>
-                    <p className="text-white font-medium">Registration File</p>
+                    <p className="text-white font-medium">Registration Sheet</p>
                     <p className="text-blue-100 text-sm">
-                      {fileInfo.recordCount} registrations • Last updated: {fileInfo.lastModified.toLocaleString()}
+                      {fileInfo.recordCount} registrations
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={handleDownload}
-                  disabled={isDownloading}
-                  className="flex items-center gap-2 bg-green-500/20 hover:bg-green-500/30 text-green-100 px-4 py-2 rounded-lg border border-green-500/30 transition-all duration-200 disabled:opacity-50"
+                <a
+                  href={`https://docs.google.com/spreadsheets/d/${fileInfo.spreadsheetId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 bg-green-500/20 hover:bg-green-500/30 text-green-100 px-4 py-2 rounded-lg border border-green-500/30 transition-all duration-200"
                 >
-                  <Download className="w-4 h-4" />
-                  {isDownloading ? 'Downloading...' : 'Download Excel'}
-                </button>
+                  <FileText className="w-4 h-4" />
+                  View in Google Sheets
+                </a>
               </div>
             </div>
           )}
 
           <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 md:p-12 border border-white/20 shadow-2xl hover:bg-white/15 transition-all duration-500 animate-fade-in-up animation-delay-1200">
             <div className="text-center mb-8">
-              <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">Join the Conference</h3>
-              <p className="text-sm md:text-base text-blue-100">Register now to secure your spot at this premier technology event</p>
+              <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">
+                Join the Conference
+              </h3>
+              <p className="text-sm md:text-base text-blue-100">
+                Register now to secure your spot at this premier technology
+                event
+              </p>
             </div>
 
-            <form id="conference-form" onSubmit={handleSubmit} className="space-y-6">
+            <form
+              id="conference-form"
+              onSubmit={handleSubmit}
+              className="space-y-6"
+            >
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="transform hover:scale-105 transition-transform duration-200">
                   <label className="block text-white text-sm font-medium mb-2">
@@ -253,11 +293,15 @@ export default function IEEEConferencePage() {
                       type="text"
                       placeholder="Enter your full name"
                       value={formData.name}
-                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("name", e.target.value)
+                      }
                       className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-sm text-white placeholder-white/50 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     />
                   </div>
-                  {errors.name && <p className="mt-1 text-red-400 text-sm">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="mt-1 text-red-400 text-sm">{errors.name}</p>
+                  )}
                 </div>
                 <div className="transform hover:scale-105 transition-transform duration-200">
                   <label className="block text-white text-sm font-medium mb-2">
@@ -269,11 +313,17 @@ export default function IEEEConferencePage() {
                       type="text"
                       placeholder="Your organization"
                       value={formData.companyName}
-                      onChange={(e) => handleInputChange('companyName', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("companyName", e.target.value)
+                      }
                       className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-sm text-white placeholder-white/50 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     />
                   </div>
-                  {errors.companyName && <p className="mt-1 text-red-400 text-sm">{errors.companyName}</p>}
+                  {errors.companyName && (
+                    <p className="mt-1 text-red-400 text-sm">
+                      {errors.companyName}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
@@ -287,18 +337,28 @@ export default function IEEEConferencePage() {
                       type="tel"
                       placeholder="+63 xxx xxx xxxx"
                       value={formData.contactNumber}
-                      onChange={(e) => handleInputChange('contactNumber', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("contactNumber", e.target.value)
+                      }
                       className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-sm text-white placeholder-white/50 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     />
                   </div>
-                  {errors.contactNumber && <p className="mt-1 text-red-400 text-sm">{errors.contactNumber}</p>}
+                  {errors.contactNumber && (
+                    <p className="mt-1 text-red-400 text-sm">
+                      {errors.contactNumber}
+                    </p>
+                  )}
                 </div>
                 <div className="transform hover:scale-105 transition-transform duration-200">
                   <label className="block text-white text-sm font-medium mb-2">
                     Email Address <span className="text-red-400">*</span>
                   </label>
                   <div className="relative">
-                    <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" fill="currentColor" viewBox="0 0 20 20">
+                    <svg
+                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
                       <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                       <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                     </svg>
@@ -306,11 +366,17 @@ export default function IEEEConferencePage() {
                       type="email"
                       placeholder="your@email.com"
                       value={formData.emailAddress}
-                      onChange={(e) => handleInputChange('emailAddress', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("emailAddress", e.target.value)
+                      }
                       className="w-full pl-12 pr-4 py-3 bg-white/10 backdrop-blur-sm text-white placeholder-white/50 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
                     />
                   </div>
-                  {errors.emailAddress && <p className="mt-1 text-red-400 text-sm">{errors.emailAddress}</p>}
+                  {errors.emailAddress && (
+                    <p className="mt-1 text-red-400 text-sm">
+                      {errors.emailAddress}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="w-full">
@@ -325,7 +391,7 @@ export default function IEEEConferencePage() {
                       Processing...
                     </div>
                   ) : (
-                    'Register for Conference'
+                    "Register for Conference"
                   )}
                 </button>
               </div>
@@ -363,6 +429,13 @@ export default function IEEEConferencePage() {
         isOpen={showSuccessModal}
         onClose={handleModalClose}
         title="Registration Successful!"
+      />
+
+      <ErrorModal
+        isOpen={showErrorModal}
+        onClose={handleErrorModalClose}
+        title="Registration Failed"
+        message={errorMessage}
       />
 
       <style>{`
@@ -413,4 +486,4 @@ export default function IEEEConferencePage() {
       `}</style>
     </div>
   );
-};
+}
