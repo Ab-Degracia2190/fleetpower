@@ -17,16 +17,36 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
           lfs: false
 
+      - name: Create .env file from GitHub secrets
+        run: |
+          echo "VITE_APP_BASE_URL=${{ secrets.VITE_APP_BASE_URL }}" >> .env
+          echo "VITE_APP_GOOGLE_SHEET_ID=${{ secrets.VITE_APP_GOOGLE_SHEET_ID }}" >> .env
+          echo "VITE_APP_GOOGLE_CLIENT_ID=${{ secrets.VITE_APP_GOOGLE_CLIENT_ID }}" >> .env
+          echo "VITE_APP_GOOGLE_API_KEY=${{ secrets.VITE_APP_GOOGLE_API_KEY }}" >> .env
+        shell: bash
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.19.0' # ✅ Match required Node version from warnings
+          node-version: '20.19.0'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Application
+        run: npm run build
+        env:
+          VITE_APP_BASE_URL: ${{ secrets.VITE_APP_BASE_URL }}
+          VITE_APP_GOOGLE_SHEET_ID: ${{ secrets.VITE_APP_GOOGLE_SHEET_ID }}
+          VITE_APP_GOOGLE_CLIENT_ID: ${{ secrets.VITE_APP_GOOGLE_CLIENT_ID }}
+          VITE_APP_GOOGLE_API_KEY: ${{ secrets.VITE_APP_GOOGLE_API_KEY }}
 
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client
@@ -46,9 +66,9 @@ jobs:
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_POLITE_SAND_0590E1F00 }}
           action: "upload"
-          app_location: "/"       # Where your app source lives
-          api_location: ""        # Optional API location
-          output_location: "dist" # ✅ Changed from 'build' to 'dist'
+          app_location: "/"
+          api_location: ""
+          output_location: "dist"
           github_id_token: ${{ steps.idtoken.outputs.result }}
 
   close_pull_request_job:
